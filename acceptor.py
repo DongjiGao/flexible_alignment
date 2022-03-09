@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # 2022 Dongji Gao
 
 from collections import defaultdict
@@ -51,6 +49,9 @@ class Acceptor:
 
     def set_epsilon(self, eps_token):
         self.epsilon_token = eps_token
+
+    def set_symbol_table(self, symbol_table):
+        self.symbol_table = symbol_table
 
     def get_symbol_table(self, words):
         try:

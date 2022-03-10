@@ -7,7 +7,7 @@ from k2 import SymbolTable
 
 
 class Acceptor:
-    def __init__(self, text_file, session2spk, output_dir):
+    def __init__(self, input_text, session2spk, output_dir):
         try:
             ses2spk = defaultdict(list)
             with open(session2spk, 'r') as session2spk:
@@ -21,17 +21,20 @@ class Acceptor:
         except ValueError:
             print(f"Can not open file {session2spk}.")
 
-        try:
-            texts = {}
-            with open(text_file, 'r') as tf:
-                for line in tf.readlines():
-                    line_list = line.split()
-                    if len(line_list) >= 2:
-                        speaker = line_list[0]
-                        texts[speaker] = line_list[1:]
-            self.texts = texts
-        except ValueError:
-            print(f"Can not open file {text_file}.")
+        if isinstance(input_text, str):
+            try:
+                texts = {}
+                with open(input_text, 'r') as tf:
+                    for line in tf.readlines():
+                        line_list = line.split()
+                        if len(line_list) >= 2:
+                            speaker = line_list[0]
+                            texts[speaker] = line_list[1:]
+                self.texts = texts
+            except ValueError:
+                print(f"Can not open file {input_text}.")
+        else:
+            self.texts = input_text
 
         self.unk_token = "<UNK>"
         self.epsilon_token = "<eps>"
@@ -200,9 +203,10 @@ class Acceptor:
         with open(output_dir / "G.fst.txt", 'w') as G:
             for session in ses2spk:
                 if len(ses2spk[session]) == 1:
+                    speaker = ses2spk[session][0]
                     text = texts[speaker]
                     text_symbol = self.text_to_symbol(text, unk_token, symbol_table)
-                    self.build_one(text_symbol_list, epsilon_symbol, unk_symbol, boundary_symbol,
+                    self.build_one(text_symbol, epsilon_symbol, unk_symbol, boundary_symbol,
                                    weight, deletion_weight, G)
                 else:
                     text_symbol_list = []

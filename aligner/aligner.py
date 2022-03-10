@@ -1,13 +1,15 @@
 # 2021 Dongji Gao
 
+import os
+from pathlib import Path
+
+import datasets
 import k2
 import numpy as np
-import os
 import torch
 import torch.nn.functional as F
+from acceptor import Acceptor
 from kaldialign import edit_distance
-from pathlib import Path
-import datasets
 from snowfall.common import find_first_disambig_symbol
 from snowfall.common import get_texts
 from snowfall.decoding.graph import compile_HLG
@@ -19,23 +21,20 @@ from transformers import (
     Wav2Vec2Processor,
     Wav2Vec2ForCTC,
 )
-from acceptor import Acceptor
 
 
 class Aligner():
-    def __init__(self, model, dataset, lang_dir, graph_dir, acceptor):
+    def __init__(self, model, dataset, lang_dir, graph_dir):
         self.model = model
         self.dataset = datasets.load_from_disk(dataset)
         self.lang_dir = Path(lang_dir)
         self.graph_dir = Path(graph_dir)
-        self.acceptor = acceptor
 
     def make_g_fst(self):
         raise NotImplementedError
 
     def make_graph(self):
         raise NotImplementedError
-
 
     def load_model(self, model):
         print(f"loading model {model}")
@@ -50,7 +49,7 @@ class Aligner():
                                                      do_normalize=True,
                                                      return_attention_mask=False)
         self.processor = Wav2Vec2Processor(feature_extractor=feature_extractor,
-                                      tokenizer=tokenizer)
+                                           tokenizer=tokenizer)
 
     def load_graph(self, graph_dir):
         d = torch.load(graph_dir / "HLG.pt")
@@ -59,7 +58,7 @@ class Aligner():
     def decode(self):
         raise NotImplementedError
 
-    def get_symbol_talbe(self, lang_dir):
+    def get_symbol_table(self, lang_dir):
         self.symbol_table = k2.SymbolTable.from_file(lang_dir / "words.txt")
 
     def run(self):
@@ -80,7 +79,7 @@ class FlexibleAligner(Aligner):
             sample = dataset[index]
             utt_id = sample["utt_id"]
             spk_id = sample["spk_id"]
-            
+
             text = sample["text"]
             if spk_id not in spk_2_text:
                 spk_2_text[spk_id] = text
@@ -89,35 +88,16 @@ class FlexibleAligner(Aligner):
             utt_2_spk[utt_id] = spk_id
         return spk_2_text, utt_2_spk, spk_2_index
 
-    def make_g_fst(self, spk_2_text, symbol_table, graph_dir, weight=0, skip_weight=0,
-                     allow_deletion=True):
-        with open(graph_dir / "G.fst.txt", "w") as G:
-            for spk_id in spk_2_text:
-                print(f"making graph for {spk_id}")
-                symbol_text = spk_2_text[spk_id].split()
-                text = [symbol_table.get(x) if x in symbol_table else symbol_table.get("<UNK>")
-                        for x in symbol_text]
-                start_state = 0
-                final_state = 1
-                cur_state = start_state
-                next_state = 2
+    def get_ses2spk(self, ses2spk_file):
+        self.ses2spk_file = ses2spk_file
 
-                line_list = text
-                assert (len(line_list) > 0)
+    def make_g_fst(self, spk_2_text, ses2spk, symbol_table, graph_dir, weight=0, skip_weight=0,
+                   allow_deletion=True):
+        self.acceptor = Acceptor(spk_2_text, ses2spk, graph_dir)
+        self.acceptor.set_symbol_table(symbol_table)
+        self.acceptor.set_boundary("@@")
+        self.acceptor.run()
 
-                for word in line_list[:-1]:
-                    if word != 56888:
-                        G.write(f"{cur_state}\t{next_state}\t{word}\t{word}\t{weight}\n")
-                        cur_state = next_state
-                        next_state += 1
-                    else:
-                        G.write(f"{start_state}\t{cur_state}\t56885\t0\t{skip_weight}\n")
-                        G.write(f"{cur_state}\t{final_state}\t56885\t0\t{skip_weight}\n")
-
-                # final state
-                word = line_list[-1]
-                G.write(f"{cur_state}\t{final_state}\t{word}\t{word}\t{weight}\n")
-                G.write(f"{final_state}\t0\n\n")
         print("Finish making G")
 
     def make_graph(self, lang_dir, graph_dir):
@@ -140,11 +120,10 @@ class FlexibleAligner(Aligner):
             G_all = f.read().strip().split("\n\n")
             for G_single in G_all:
                 G = k2.Fsa.from_openfst(G_single, acceptor=False)
-#                G_list.append(G)
-#            G = k2.create_fsa_vec(G_list)
-#            G = k2.Fsa.from_openfst(f.read(), acceptor=False)
-#        print("G loaded")
-
+                #                G_list.append(G)
+                #            G = k2.create_fsa_vec(G_list)
+                #            G = k2.Fsa.from_openfst(f.read(), acceptor=False)
+                #        print("G loaded")
 
                 HLG = compile_HLG(L=L,
                                   G=G,
@@ -167,7 +146,7 @@ class FlexibleAligner(Aligner):
         refs_all = list()
 
         for sample in dataset:
-            
+
             utt_id = sample["utt_id"]
             print(f"decoding {utt_id}")
             spk_id = sample["spk_id"]
@@ -179,7 +158,7 @@ class FlexibleAligner(Aligner):
 
             input_values = processor(sample["speech"],
                                      sampling_rate=16e3,
-                                     return_tensors="pt",).input_values
+                                     return_tensors="pt", ).input_values
             with torch.no_grad():
                 logits = model(input_values).logits
             nnet_output = F.log_softmax(logits,
@@ -223,8 +202,7 @@ class FlexibleAligner(Aligner):
         self.load_model(model)
         spk_2_text, utt_2_spk, spk_2_index = self.process_text(dataset)
         self.get_symbol_table(lang_dir)
-        symbol_table = self.symbol_table
-        self.make_g_fst(spk_2_text, symbol_table, graph_dir)
+        self.make_g_fst(spk_2_text, self.ses2spk_file, self.symbol_table, graph_dir)
         self.make_graph(lang_dir, graph_dir)
         self.load_graph(graph_dir)
 
@@ -234,11 +212,10 @@ class FlexibleAligner(Aligner):
                                            HLG,
                                            self.model,
                                            processor,
-                                           symbol_table,
+                                           self.symbol_table,
                                            graph_dir,
                                            utt_2_spk,
                                            spk_2_index)
         hyp_text = []
         for hyp in hyps_list:
             print(hyp)
-                

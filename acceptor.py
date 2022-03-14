@@ -35,13 +35,13 @@ class Acceptor:
         self.disambig_token = disambig_token
 
     def set_symbol_table(self, symbol_table):
-        self.symbol_table = symbol_table
-
-    def get_symbol_table(self, words):
-        try:
-            self.symbol_table = SymbolTable.from_file(words)
-        except ValueError:
-            print(f"Can not get symbol table form file {words}")
+        if isinstance(str, words):
+            try:
+                self.symbol_table = SymbolTable.from_file(symbol_table)
+            except ValueError:
+                print(f"Can not get symbol table form file {words}")
+        else:
+            self.symbol_table = symbol_table
 
     @staticmethod
     def token_to_id(text, symbol_table, unk_id):

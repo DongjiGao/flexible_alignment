@@ -13,13 +13,14 @@ vad_output_dir="data/raw"
 # lang setting
 oov="<UNK>"
 lang_dir="data/lang_ntu"
-graph_dir="exp/graph"
+graph_dir="exp/graph/raw_toy"
 
 # flexible_alignment setting
 model="model/robust_seame_eng_ntu/checkpoint-54500"
 dataset="dataset/ntu_raw_test_small"
-text="../test/data/raw_toy/text"
-output_dir=""
+text="../test/data/raw_toy/text_ref"
+ses2spk="../test/data/raw_toy/ses2spk"
+output_dir="exp/alignment/raw_toy"
 
 # others
 log_dir="exp/log"
@@ -29,7 +30,12 @@ nj=1
 . ./cmd.sh
 . utils/parse_options.sh
 
-set -e
+set -eu
+
+for dir in ${graph_dir} ${output_dir} ${log_dir}
+do
+  [ ! -d ${dir} ] && mkdir -p ${dir}
+done
 
 if [ ${stage} -le 0 ]; then
   echo "$0: stage 0, doing BSS"
@@ -65,18 +71,20 @@ if [ ${stage} -le 2 ]; then
   echo "$0: stage 2, preparing lang for flexible alignment"
   local/prepare_data.sh \
     --oov ${oov} \
-    ${lang} \
+    ${lang_dir} \
     ${graph_dir}
 fi
 
 if [ ${stage} -le 3 ]; then
   echo "$0: stage 3, doing flexible alignment"
-  ${alignment_cmd} ${log_dir}/align.log align.py \
+  # to use GPU, use alingment_cmd
+ #:${alignment_cmd} ${log_dir}/align.log align.py \
+  run.pl ${log_dir}/align.log align.py \
    ${model} \
    ${dataset} \
    ${text} \
    ${ses2spk} \
-   ${lang} \
+   ${lang_dir} \
    ${graph_dir} \
    ${output_dir}
 fi

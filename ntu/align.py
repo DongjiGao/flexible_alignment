@@ -3,8 +3,12 @@
 # 2021 Dongji Gao
 
 import sys
+
 sys.path.append("/export/b14/dgao/flexible_alignment/aligner")
 sys.path.append("/export/b14/dgao/flexible_alignment/")
+sys.path.append("/export/b14/dgao/snowfall")
+sys.path.append("/export/b14/dgao/icefall")
+
 from aligner import FlexibleAligner
 import argparse
 

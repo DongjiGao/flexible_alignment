@@ -11,10 +11,11 @@ import torch.nn.functional as F
 from acceptor import FlexibleAcceptor
 from kaldialign import edit_distance
 from snowfall.common import find_first_disambig_symbol
-from snowfall.common import get_texts
 from snowfall.decoding.graph import compile_HLG
 from snowfall.training.ctc_graph import build_ctc_topo
 from snowfall.training.mmi_graph import get_phone_symbols
+from icefall.decode import get_lattice
+from icefall.utils import get_texts
 from transformers import (
     Wav2Vec2CTCTokenizer,
     Wav2Vec2FeatureExtractor,
@@ -23,7 +24,7 @@ from transformers import (
 )
 
 
-class Aligner():
+class Aligner:
     def __init__(self, model, dataset, lang_dir, graph_dir, output_dir):
         self.model = model
         self.dataset = datasets.load_from_disk(dataset)
@@ -31,13 +32,19 @@ class Aligner():
         self.graph_dir = Path(graph_dir)
         self.output_dir = Path(output_dir)
 
-    def make_g_fst(self, text, ses2spk, symbol_table, graph_dir):
+    @staticmethod
+    def make_g_fst(text, ses2spk, symbol_table, graph_dir):
+        raise NotImplementedError
+
+    @staticmethod
+    def compile_HLG():
         raise NotImplementedError
 
     def make_graph(self, lang_dir, graph_dir):
         raise NotImplementedError
 
-    def load_model(self, model_file):
+    @staticmethod
+    def load_model(model_file):
         print(f"loading model {model_file}")
         model = Wav2Vec2ForCTC.from_pretrained(model_file)
         tokenizer = Wav2Vec2CTCTokenizer("./vocab.json",
@@ -51,9 +58,10 @@ class Aligner():
                                                      return_attention_mask=False)
         processor = Wav2Vec2Processor(feature_extractor=feature_extractor,
                                       tokenizer=tokenizer)
-        return processor, model
+        return model, processor
 
-    def load_graph(self, graph_dir):
+    @staticmethod
+    def load_graph(graph_dir):
         d = torch.load(graph_dir / "HLG.pt")
         HLG = k2.Fsa.from_dict(d)
         return HLG
@@ -61,7 +69,8 @@ class Aligner():
     def decode(self):
         raise NotImplementedError
 
-    def get_symbol_table(self, lang_dir):
+    @staticmethod
+    def get_symbol_table(lang_dir):
         symbol_table = k2.SymbolTable.from_file(lang_dir / "words.txt")
         return symbol_table
 
@@ -75,7 +84,8 @@ class FlexibleAligner(Aligner):
         self.text = text
         self.ses2spk = ses2spk
 
-    def make_g_fst(self, text, ses2spk, symbol_table, graph_dir):
+    @staticmethod
+    def make_g_fst(text, ses2spk, symbol_table, graph_dir):
         f_acceptor = FlexibleAcceptor(text, ses2spk, graph_dir)
         f_acceptor.set_symbol_table(symbol_table)
         spk2accid = f_acceptor.run()
@@ -83,8 +93,40 @@ class FlexibleAligner(Aligner):
         print("Finish making G")
         return spk2accid
 
+    @staticmethod
+    def compile_HLG(H, L, G, first_token_disambig_id, first_word_disambig_id, determinize=True,
+                    remove_epsilon=True):
+
+        L = k2.arc_sort(L)
+        G = k2.arc_sort(G)
+        G.lm_scores = G.scores.clone()
+        LG = k2.compose(L, G)
+        LG = k2.connect(LG)
+
+        if determinize:
+            LG = k2.determinize(LG)
+            LG = k2.connect(LG)
+
+        LG.labels[LG.labels >= first_token_disambig_id] = 0
+        # See https://github.com/k2-fsa/k2/issues/874
+        # for why we need to set LG.properties to None
+        LG.__dict__["_properties"] = None
+        assert isinstance(LG.aux_labels, k2.RaggedTensor)
+        LG.aux_labels.values[LG.aux_labels.values >= first_word_disambig_id] = 0
+
+        if remove_epsilon:
+            LG = k2.remove_epsilon(LG)
+            LG = k2.connect(LG)
+
+        LG.aux_labels = LG.aux_labels.remove_values_eq(0)
+        LG = k2.arc_sort(LG)
+        HLG = k2.compose(H, LG, inner_labels='phones')
+        HLG = k2.connect(HLG)
+        HLG = k2.arc_sort(HLG)
+
+        return HLG
+
     def make_graph(self, lang_dir, graph_dir):
-        G_list = list()
         HLG_list = list()
 
         phone_symbol_table = k2.SymbolTable.from_file(lang_dir / 'phones.txt')
@@ -103,32 +145,24 @@ class FlexibleAligner(Aligner):
             G_all = f.read().strip().split("\n\n")
             for G_single in G_all:
                 G = k2.Fsa.from_openfst(G_single, acceptor=False)
-                #                G_list.append(G)
-                #            G = k2.create_fsa_vec(G_list)
-                #            G = k2.Fsa.from_openfst(f.read(), acceptor=False)
-                #        print("G loaded")
-
-                HLG = compile_HLG(L=L,
-                                  G=G,
-                                  H=ctc_topo,
-                                  labels_disambig_id_start=first_phone_disambig_id,
-                                  aux_labels_disambig_id_start=first_word_disambig_id)
+                HLG = self.compile_HLG(H=ctc_topo,
+                                       L=L,
+                                       G=G,
+                                       first_token_disambig_id=first_phone_disambig_id,
+                                       first_word_disambig_id=first_word_disambig_id)
                 HLG_list.append(HLG)
 
         HLGs = k2.create_fsa_vec(HLG_list)
-
         torch.save(HLGs.as_dict(), graph_dir / "HLG.pt")
-        print("Finish making graph")
 
     def decode(self, dataset, HLGs, model, processor, symbol_table, graph_dir,
-               spk2index, search_beam=30.0, output_beam=15.0,
+               spk2index, device, search_beam=30.0, output_beam=15.0,
                min_active_states=7000, max_active_states=28000, blank_bias=0.0):
 
         hyps_all = list()
         refs_all = list()
 
         for sample in dataset:
-
             utt_id = sample["utt_id"]
             spk_id = sample["spk_id"]
             print(f"Decoding utt: {utt_id} from speaker: {spk_id}.")
@@ -142,18 +176,28 @@ class FlexibleAligner(Aligner):
             input_values = processor(sample["speech"],
                                      sampling_rate=16e3,
                                      return_tensors="pt", ).input_values
+
             with torch.no_grad():
                 logits = model(input_values).logits
             nnet_output = F.log_softmax(logits,
                                         dim=-1,
                                         dtype=torch.float32)
             nnet_output[:, :, 0] += blank_bias
-            supervision = torch.tensor([[0, 0, nnet_output.shape[1]]], dtype=torch.int32)
+            supervision_segments = torch.tensor([[0, 0, nnet_output.shape[1]]], dtype=torch.int32)
 
-            dense_fsa_vec = k2.DenseFsaVec(nnet_output, supervision)
-            lattices = k2.intersect_dense_pruned(HLG, dense_fsa_vec, search_beam,
-                                                 output_beam, min_active_states,
-                                                 max_active_states)
+            #            dense_fsa_vec = k2.DenseFsaVec(nnet_output, supervision)
+            #            lattices = k2.intersect_dense_pruned(HLG, dense_fsa_vec, search_beam,
+            #                                                 output_beam, min_active_states,
+            #                                                 max_active_states)
+            lattices = get_lattice(nnet_output=nnet_output,
+                                   decoding_graph=HLG,
+                                   supervision_segments=supervision_segments,
+                                   search_beam=search_beam,
+                                   output_beam=output_beam,
+                                   min_active_states=min_active_states,
+                                   max_active_states=max_active_states,
+                                   )
+
             best_paths = k2.shortest_path(lattices, use_double_scores=True)
             indices = torch.tensor([0])
             hyps = get_texts(best_paths, indices)
@@ -162,7 +206,8 @@ class FlexibleAligner(Aligner):
 
         return hyps_all, refs_all
 
-    def score(self, hyps_list, refs_list):
+    @staticmethod
+    def score(hyps_list, refs_list):
         dists = list()
         for index in range(len(refs_list)):
             dists.append(edit_distance(refs_list[index][1:], hyps_list[index][1:]))
@@ -176,7 +221,8 @@ class FlexibleAligner(Aligner):
         print("done scoring")
         print(errors)
 
-    def write(self, hyp_list, output_dir):
+    @staticmethod
+    def write(hyp_list, output_dir):
         with open(output_dir / "text", "w") as output_file:
             for hyp in hyp_list:
                 if len(hyp) > 1:
@@ -192,12 +238,22 @@ class FlexibleAligner(Aligner):
         ses2spk_file = self.ses2spk
         output_dir = self.output_dir
 
-        processor, model = self.load_model(model_file)
+        device = torch.device("cpu")
+        #        if torch.cuda.is_available():
+        #            device = torch.device("cuda", 0)
+
+        # load model, graph
+        model, processor = self.load_model(model_file)
         symbol_table = self.get_symbol_table(lang_dir)
 
         spk2accid = self.make_g_fst(text_file, ses2spk_file, symbol_table, graph_dir)
         self.make_graph(lang_dir, graph_dir)
         HLG = self.load_graph(graph_dir)
+
+        # using GPU
+        assert HLG.requires_grad is False
+        if not hasattr(HLG, "lm_scores"):
+            HLG.lm_scores = HLG.scores.clone()
 
         hyps_list, refs_list = self.decode(dataset,
                                            HLG,
@@ -205,5 +261,7 @@ class FlexibleAligner(Aligner):
                                            processor,
                                            symbol_table,
                                            graph_dir,
-                                           spk2accid)
+                                           spk2accid,
+                                           device,
+                                           )
         self.write(hyps_list, output_dir)

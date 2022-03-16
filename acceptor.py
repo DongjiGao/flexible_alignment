@@ -35,7 +35,7 @@ class Acceptor:
         self.disambig_token = disambig_token
 
     def set_symbol_table(self, symbol_table):
-        if isinstance(str, symbol_table):
+        if isinstance(symbol_table, str):
             try:
                 self.symbol_table = SymbolTable.from_file(symbol_table)
             except ValueError:

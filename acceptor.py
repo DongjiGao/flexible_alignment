@@ -188,9 +188,10 @@ class FlexibleAcceptor(Acceptor):
             from_state = utt2state[utt][1]
             to_state = utt2state[next_utt][0]
             if from_state != to_state:
-                bypass_arc = self.get_arc(from_state, to_state, 11, epsilon_id,
+                bypass_arc = self.get_arc(from_state, to_state, disambig_id, epsilon_id,
                                           deletion_weight)
-                arcs.append(bypass_arc)
+                if bypass_arc not in arcs:
+                    arcs.append(bypass_arc)
 
         final_arc = f"{final_state}\t{0}"
         for arc in arcs:
@@ -200,6 +201,7 @@ class FlexibleAcceptor(Acceptor):
     def build(self, ses2spk, spk2utt, utt2text, ses2order, unk_id, epsilon_id, disambig_id,
               output_dir, weight=0, deletion_weight=0):
         spk2accid = {}
+
         with open(output_dir / "G.fst.txt", 'w') as G:
             for index, session in enumerate(ses2spk):
                 if len(ses2spk[session]) == 1:
@@ -235,5 +237,5 @@ class FlexibleAcceptor(Acceptor):
                                                                   unk_id)
         output_dir = self.output_dir
         spk2accid = self.build(ses2spk, spk2utt, utt2text, ses2order, unk_id, epsilon_id,
-                               disambig_id, output_dir)
+                               disambig_id, output_dir, deletion_weight=0)
         return spk2accid

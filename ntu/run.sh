@@ -18,7 +18,7 @@ graph_dir="exp/graph/raw_toy"
 # flexible_alignment setting
 model="model/robust_seame_eng_ntu/checkpoint-54500"
 dataset="dataset/ntu_raw_test_small"
-text="../test/data/raw_toy/text_ref"
+text="../test/data/raw_toy/text_ref_switch"
 ses2spk="../test/data/raw_toy/ses2spk"
 output_dir="exp/alignment/raw_toy"
 

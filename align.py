@@ -5,11 +5,11 @@
 import sys
 import torch
 
-sys.path.append("/export/c26/dgao/flexible_alignment/aligner")
-sys.path.append("/export/c26/dgao/flexible_alignment/")
-sys.path.append("/export/b14/dgao/snowfall")
-sys.path.append("/export/b14/dgao/icefall")
-sys.path.insert(0, "/home/dgao/anaconda3/envs/k2/lib/python3.8/site-packages/")
+#sys.path.append("/export/c26/dgao/flexible_alignment/aligner")
+#sys.path.append("/export/c26/dgao/flexible_alignment/")
+#sys.path.append("/export/b14/dgao/snowfall")
+#sys.path.append("/export/b14/dgao/icefall")
+#sys.path.insert(0, "/home/dgao/anaconda3/envs/k2/lib/python3.8/site-packages/")
 
 
 from aligner import FlexibleAligner

@@ -33,7 +33,7 @@ https://pyannote.github.io/
 ```
 ### Data preparation
 #### text file
-##### This file contains the transcriptions of each utterance. Each line is in the form of "utterance_id transcription". Lines must be in the chronological order. For example:
+##### This file contains the transcriptions of each utterance. Each line is in the form of "UTTERANCE_ID TRANSCRIPTS" where UTTERANCE_ID should be SESSION_SPEAKER_INDEX. Lines must be in the chronological order. For example:
 ```
 session1_speaker1_utterance1 He expired two hours later
 session1_speaker2_utterance1 Expired means die right
@@ -41,3 +41,5 @@ session1_speaker1_utterance2 Pancreas I I think so
 session1_speaker3_utterance1 Ah yes <LAU>
 session1_speaker2_utterance2 Okay
 ```
+#### audio file
+##### This file contains the wav audio of each speaker. Each line is in the form of " transcription".

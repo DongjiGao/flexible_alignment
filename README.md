@@ -51,4 +51,18 @@ session1_speaker3_utterance1 Ah yes <LAU>
 session1_speaker2_utterance2 Okay
 ```
 #### audio file
-##### This file contains the wav audio of each speaker. Each line is in the form of " transcription".
+##### This file contains the location of audio for each speaker. Each line is in the form of
+```
+<recording-id> <location_of_audio_file>
+```
+##### and the format of \<recording_id\> is 
+```
+<session_id>_<speaker_id>
+```
+##### For example:
+```
+session1_speaker1 /DATA/session1_speaker1.wav
+session1_speaker2 /DATA/session1_speaker2.wav
+session1_speaker3 /DATA/session1_speaker3.wav
+
+```

@@ -32,4 +32,12 @@ https://pyannote.github.io/
 ./run.sh
 ```
 ### Data preparation
-#### text
+#### text file
+##### This file contains the transcriptions of each utterance. Each line is in the form of "utterance_id transcription". Lines must be in the chronological order. For example:
+```
+session1_speaker1_utterance1 He expired two hours later
+session1_speaker2_utterance1 Expired means die right
+session1_speaker1_utterance2 Pancreas I I think so
+session1_speaker3_utterance1 Ah yes <LAU>
+session1_speaker2_utterance2 Okay
+```

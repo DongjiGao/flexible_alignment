@@ -6,4 +6,6 @@
 
 ## Requirements
 ### [k2](https://k2-fsa.github.io/k2/)
+'''
+$ conda install -c k2-fsa -c pytorch -c conda-forge k2 python=3.8 cudatoolkit=11.3 pytorch=1.11
 ## Usage

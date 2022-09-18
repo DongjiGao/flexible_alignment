@@ -24,3 +24,7 @@ pip install pyroomacoustics
 https://pyannote.github.io/
 ```
 ## Usage
+```
+./run.sh
+```
+### Data preparation

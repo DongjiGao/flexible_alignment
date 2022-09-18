@@ -37,7 +37,11 @@ https://pyannote.github.io/
 ```
 "<utterance_id> <transcription>" 
 ```
-##### and the format of \<utterance_id\> is \<session_id\>_\<speaker_id\>_\<utterance_id_of_speaker\>. Lines must be in the chronological order. 
+##### and the format of \<utterance_id\> is 
+```
+<session_id>_<speaker_id>_<utterance_id_of_speaker>
+```
+### Lines must be in the chronological order. 
 ##### For example:
 ```
 session1_speaker1_utterance1 He expired two hours later

@@ -32,4 +32,4 @@ https://pyannote.github.io/
 ./run.sh
 ```
 ### Data preparation
-Data need to be prepared as Hugging Face dataset.
+#### text

@@ -136,8 +136,13 @@ ${alignment_cmd} ${log_dir}/align.log align.py \
   4) get nbest alignment and do xvector rescoring (speaker dependent)
 
 ## Results
-### ASR model
+### ASR model fine-tuned on different pre-trained model 
 
 || Wav2Vec2-XLSR-53  | Wav2Vec2-Large-Robust|
 | --------------- | :---------------:| :---------------: |
 |WER | 56 | 43 |
+
+### flexible alignment
+|NTU collaborative dataset|
+| --------------- | :---------------:| :---------------: |
+|alignment|flexible alignment|flexible alignment + xvector resoring|

@@ -139,5 +139,5 @@ ${alignment_cmd} ${log_dir}/align.log align.py \
 ### ASR model
 
 || Wav2Vec2-XLSR-53  | Wav2Vec2-Large-Robust|
-| --------------- | --------------- | --------------- |
+| --------------- | :---------------:| :---------------: |
 |WER | 56 | 43 |

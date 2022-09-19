@@ -97,7 +97,7 @@ run.pl ${log_dir}/vad.log local/vad.py \
   ${wav_file} \
   ${vad_output_dir}
 ```
-#### This step do VAD on BSSed audio (wav_file) and write segments in vad_output_dir. 
+#### This step do VAD on BSSed audio (wav_file) and write segments in vad_output_dir. If ground truth segments is provided, it can analyze the quality of VAD results by measuring [precision_call, IoU (intersection over union)].
 
 ### Stage 2: make lang directory
 ```
@@ -120,4 +120,7 @@ ${alignment_cmd} ${log_dir}/align.log align.py \
   ${output_dir} \
   ${use_xvector}
 ```
-#### This step does 3 things: 1) build decoding (alignment graph) of given text. 2) integrate ASR mode and decoding graph in graph_dir (aligner) 3) do flexible alingment for dataset. 
+#### This step does 3 things: 
+  1) build decoding (alignment graph) of given text. 
+  2) integrate ASR mode and decoding graph in graph_dir (aligner) 
+  3) do flexible alingment for dataset. 

@@ -74,6 +74,14 @@ a       AX
 nice    N AY S
 beach   B IY CH
 ```
+#### ses2spk
+##### The mapping between session and speakers
+```
+session1 speaker1
+session1 speaker2
+session2 spkeaer3
+session2 spkeaer4
+```
 #### ASR model and phoneme vocabulary
 ###### These can be download here.
 
@@ -97,7 +105,7 @@ run.pl ${log_dir}/vad.log local/vad.py \
   ${wav_file} \
   ${vad_output_dir}
 ```
-#### This step do VAD on BSSed audio (wav_file) and write segments in vad_output_dir. If ground truth segments is provided, it can analyze the quality of VAD results by measuring [precision_call, IoU (intersection over union)].
+#### This step do VAD on BSSed audio (wav_file) and write segments in vad_output_dir. If ground truth segment is provided, it can analyze the quality of VAD results by measuring [precision_call, IoU (intersection over union), Jaccard error rate].
 
 ### Stage 2: make lang directory
 ```

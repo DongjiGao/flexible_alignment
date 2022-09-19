@@ -146,7 +146,7 @@ ${alignment_cmd} ${log_dir}/align.log align.py \
  
 <table>
   <tr>
-    <td style="text-align:center;" colspan="3">NTU collaborative dataset</td>
+    <td style="text-align:center;" >NTU collaborative dataset</td>
   </tr>
   <tr>
     <td>alignment</td>

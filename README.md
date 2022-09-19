@@ -74,5 +74,5 @@ a       AX
 nice    N AY S
 beach   B IY CH
 ```
-#### ASR model
-#### vocabulary
+#### ASR model and phoneme vocabulary
+###### These can be download here.

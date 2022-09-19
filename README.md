@@ -142,11 +142,23 @@ ${alignment_cmd} ${log_dir}/align.log align.py \
 | --------------- | :---------------:| :---------------: |
 |WER | 56 | 43 |
 
-| One    | Two | Three | Four    | Five  | Six 
-| -
-| Span <td colspan=3>triple  <td colspan=2>double
-  
-### flexible alignment
+### flexible alignment (WER)
 | --------------- | :---------------:| :---------------: |
 | <td colspan=3>NTU collaborative dataset |
 |alignment|flexible alignment|flexible alignment + xvector resoring|
+  
+<table>
+  <tr>
+    <td colspan="3">NTU collaborative dataset</td>
+  </tr>
+  <tr>
+    <td>alignment</td>
+    <td>flexible alignment</td>
+    <td>flexible alignment + xvector rescoring</td>
+  </tr>
+   <tr>
+    <td>15.45</td>
+    <td>12.05</td>
+    <td>11.31</td>
+  </tr>
+</table>

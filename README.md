@@ -41,7 +41,7 @@ https://pyannote.github.io/
 ```
 <session_id>_<speaker_id>_<utterance_id_of_speaker>
 ```
-### Lines must be in the chronological order. 
+##### Lines must be in the chronological order. 
 ##### For example:
 ```
 session1_speaker1_utterance1 He expired two hours later
@@ -66,3 +66,13 @@ session1_speaker2 /DATA/session1_speaker2.wav
 session1_speaker3 /DATA/session1_speaker3.wav
 
 ```
+#### lexicon
+##### This file maps phonemes to word
+```
+wreck   R EH K
+a       AX
+nice    N AY S
+beach   B IY CH
+```
+#### ASR model
+#### vocabulary

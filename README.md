@@ -31,7 +31,7 @@ https://pyannote.github.io/
 ```
 ./run.sh
 ```
-### Data preparation
+## Data preparation
 #### text file
 ##### This file contains the transcriptions of each utterance. Each line is in the form of 
 ```
@@ -76,3 +76,13 @@ beach   B IY CH
 ```
 #### ASR model and phoneme vocabulary
 ###### These can be download here.
+
+## Usage
+```
+./run.sh
+```
+### Stage 0: blind source serapation
+```
+${alignment_cmd} ${log_dir}/bss.log local/prepare_bss.py ${raw_wav_file} ${tmp_dir} ${bss_output_dir} ${wav_file}
+
+#### This step do blind source separtion on input channels in raw_wav_file (wav.scp). The BSSed audio is stored in bss_output_dir and its wav.scp in wav_file.

@@ -132,3 +132,8 @@ ${alignment_cmd} ${log_dir}/align.log align.py \
   1) build decoding (alignment graph) of given text. 
   2) integrate ASR mode and decoding graph in graph_dir (aligner) 
   3) do flexible alingment for dataset. 
+  if use_xvector is turned on
+  4) get nbest alignment and do xvector rescoring (speaker dependent)
+
+## Results
+### ASR model

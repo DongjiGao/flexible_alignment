@@ -143,6 +143,6 @@ ${alignment_cmd} ${log_dir}/align.log align.py \
 |WER | 56 | 43 |
 
 ### flexible alignment
-|NTU collaborative dataset|
+||NTU collaborative dataset||
 | --------------- | :---------------:| :---------------: |
 |alignment|flexible alignment|flexible alignment + xvector resoring|

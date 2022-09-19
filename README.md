@@ -84,5 +84,40 @@ beach   B IY CH
 ### Stage 0: blind source serapation
 ```
 ${alignment_cmd} ${log_dir}/bss.log local/prepare_bss.py ${raw_wav_file} ${tmp_dir} ${bss_output_dir} ${wav_file}
-
+```
 #### This step do blind source separtion on input channels in raw_wav_file (wav.scp). The BSSed audio is stored in bss_output_dir and its wav.scp in wav_file.
+
+### Stage 1: voice activity detection
+```
+run.pl ${log_dir}/vad.log local/vad.py \
+  --ref-segment "data/ntu/segments" \
+  --collar 0.2 \
+  --gap 0.5 \
+  --metric "precision_recall" \
+  ${wav_file} \
+  ${vad_output_dir}
+```
+#### This step do VAD on BSSed audio (wav_file) and write segments in vad_output_dir. 
+
+### Stage 2: make lang directory
+```
+local/prepare_data.sh \
+  --oov ${oov} \
+  ${lang_dir} \
+  ${graph_dir}
+```
+#### This step makes lexicon WFST (L.fst) in graph_dir
+
+### Stage 3: flexible alignment
+```
+${alignment_cmd} ${log_dir}/align.log align.py \
+  ${model} \
+  ${dataset} \
+  ${text} \
+  ${ses2spk} \
+  ${lang_dir} \
+  ${graph_dir} \
+  ${output_dir} \
+  ${use_xvector}
+```
+#### This step does 3 things: 1) build decoding (alignment graph) of given text. 2) integrate ASR mode and decoding graph in graph_dir (aligner) 3) do flexible alingment for dataset. 

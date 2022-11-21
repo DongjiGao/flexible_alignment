@@ -94,8 +94,11 @@ def make_single_substring(
     start_state = 0
     next_state = 1
     cur_state = start_state
+    
+    num_utts = len(utts)
+    assert num_utts >= 2
 
-    for utt in utts:
+    for utt_idx, utt in enumerate(utts):
         if allow_insertion:
             insertion_arc = get_arc(
                 cur_state, cur_state, unk_id, unk_id, insertion_weight
@@ -109,16 +112,17 @@ def make_single_substring(
             arcs.append(arc)
             cur_state = next_state
             next_state += 1
-        skip_arc = get_arc(start_state, cur_state, disambig_id, 0, 0)
-        arcs.append(skip_arc)
-        text_ending_states.append(cur_state)
+        if utt_idx < num_utts - 1:
+            skip_arc = get_arc(start_state, cur_state, disambig_id, 0, 0)
+            arcs.append(skip_arc)
+            text_ending_states.append(cur_state)
 
-    prev_final_stage = cur_state
+    prefinal_stage = cur_state
     final_state = next_state
-    for state in text_ending_states[:-1]:
-        skip_arc = get_arc(state, prev_final_stage, disambig_id, 0, 0)
+    for state in text_ending_states:
+        skip_arc = get_arc(state, prefinal_stage, disambig_id, 0, 0)
         arcs.append(skip_arc)
-    final_arc = get_arc(prev_final_stage, final_state, -1, -1, 0)
+    final_arc = get_arc(prefinal_stage, final_state, -1, -1, 0)
     arcs.append(final_arc)
     # add final state
     arcs.append(f"{final_state}")

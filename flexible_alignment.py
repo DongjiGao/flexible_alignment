@@ -5,6 +5,7 @@ import argparse
 import logging
 from pathlib import Path
 from functools import lru_cache
+from typing import Dict, List, Optional, Tuple
 
 import torch
 from torch import nn
@@ -91,7 +92,7 @@ def align_one_batch(
     HLG: k2.Fsa,
     batch: dict,
     lexicon: Lexicon,
-):
+)->Dict[str, List[List[str]]]:
     device = HLG.device
     feature = batch["inputs"]
     assert feature.ndim == 3
@@ -130,6 +131,11 @@ def align_one_batch(
         lattice=lattice, use_double_scores=params.use_double_scores
     )
 
+    key = "no_rescore"
+    hyps = get_texts(best_path)
+    hyps = [[lexicon.word_table[i] for i in ids] for ids in hyps]
+    return {key: hyps}
+
 
 def flexible_alignment(
     dl: torch.utils.data.DataLoader,
@@ -138,8 +144,13 @@ def flexible_alignment(
     HLGs: k2.Fsa,
     lexicon: Lexicon,
 ):
+    results = []
+
     for batch_idx, batch in enumerate(dl):
-        assert len(batch["supervisions"]["cut"] == 2
+        assert len(batch["supervisions"]["cut"]) == 2
+
+        cut_ids = [cut.id for cut in batch["supervisions"]["cut"]]
+        texts = batch["supervisions"]["text"]
         hlg_id = batch["supervisions"]["cut"][0].supervisions[0].hlg_id
         HLG = HLGs[hlg_id]
 
@@ -150,6 +161,18 @@ def flexible_alignment(
             batch=batch,
             lexicon=lexicon,
         )
+
+        for lm_scale, hyps in hyps_dict.items():
+            this_batch = []
+            assert len(hyps) == len(texts)
+
+            for cut_id, hyp_words, ref_text in zip(cut_ids, hyps, texts):
+                ref_words = ref_text.split()
+                this_batch.append((cut_id, ref_words, hyp_words))
+
+        results[lm_scale].extend(this_batch)
+
+    return results
 
 def main():
     args = get_args()

@@ -19,11 +19,11 @@ export PYTHONPATH=/tmp/icefall:$PYTHONPATH
 pip install transformers
 pip install datasets
 ```
-*** **[Optional]** Install [pyroomacoustics](https://github.com/LCAV/pyroomacoustics) for Blind Source Separation
+### **[Optional]** Install [pyroomacoustics](https://github.com/LCAV/pyroomacoustics) for Blind Source Separation
 ```
 pip install pyroomacoustics
 ```
-*** **[Optional]** Install [pyannote](https://pyannote.github.io/) for Voice Activity Detection
+### **[Optional]** Install [pyannote](https://pyannote.github.io/) for Voice Activity Detection
 ```
 https://pyannote.github.io/
 ```
@@ -90,30 +90,35 @@ session2 spkeaer4
 ```
 ./run.sh
 ```
-### Stage 0: blind source serapation
+### Blind Source Serapation
 ```
 ${alignment_cmd} ${log_dir}/bss.log local/prepare_bss.py ${raw_wav_file} ${tmp_dir} ${bss_output_dir} ${wav_file}
 ```
 #### This step do blind source separtion on input channels in raw_wav_file (wav.scp). The BSSed audio is stored in bss_output_dir and its wav.scp in wav_file.
 
-### Stage 1: voice activity detection
+### Voice Activity Detection
 ```
-run.pl ${log_dir}/vad.log local/vad.py \
-  --ref-segment "data/ntu/segments" \
-  --collar 0.2 \
-  --gap 0.5 \
-  --metric "precision_recall" \
-  ${wav_file} \
-  ${vad_output_dir}
+if "${do_vad}"; then
+  echo "$0: stage 1, doing VAD on audio"
+  ${cuda_cmd} ${log_dir}/vad.log local/vad.py \
+    --auth-token "${auth_token}" \
+    --collar 0.0 \
+    ${wav_file} \
+    ${vad_segment_output_dir}
+else
+  log "Skip doing VAD"
+fi
 ```
 #### This step do VAD on BSSed audio (wav_file) and write segments in vad_output_dir. If ground truth segment is provided, it can analyze the quality of VAD results by measuring [precision_call, IoU (intersection over union), Jaccard error rate].
 
-### Stage 2: make lang directory
+### Stage 1: make lang directory
 ```
-local/prepare_data.sh \
-  --oov ${oov} \
-  ${lang_dir} \
-  ${graph_dir}
+if [ -f ${lang_dir}/lexicon.txt ]; then
+  ./local/prepare_lang.py --lang-dir "${lang_dir}"
+else
+  log "Lexicon file (${lang_dir}/lexicon.txt) must be provided"
+  exit 1
+fi
 ```
 #### This step makes lexicon WFST (L.fst) in graph_dir
 

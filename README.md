@@ -146,7 +146,8 @@ ${cuda_cmd} "${log_dir}/flexible_alignment.log" \
 ./flexible_alignment.py \
   --data-dir "${data_dir}" \
   --lang-dir "${lang_dir}" \
-  --checkpoint "${model}" \--exp-dir "${output_dir}"
+  --checkpoint "${model}" \
+  --exp-dir "${output_dir}"
 ```
 ## Results
 ### ASR model fine-tuned on different pre-trained model 

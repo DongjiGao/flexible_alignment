@@ -3,6 +3,7 @@
 
 import argparse
 import logging
+from collections import defaultdict
 from pathlib import Path
 from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
@@ -10,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from lhotse import load_manifest_lazy
+from lhotse import load_manifest
 from lhotse.dataset import (
     CutConcatenate,
     CutMix,
@@ -34,8 +35,9 @@ from icefall.utils import (
 )
 from icefall.checkpoint import average_checkpoints, load_checkpoint
 from icefall.lexicon import Lexicon
+from icefall.env import get_env_info
 import k2
-from model import TdnnLstm
+from conformer import Conformer
 
 
 def get_args():
@@ -50,30 +52,38 @@ def get_args():
 def get_params() -> AttributeDict:
     params = AttributeDict(
         {
-            "feature_dim": 1024,
-            "subsampling_factor": 3,
+            # parameters for conformer
+            "subsampling_factor": 4,
+            "vgg_frontend": False,
+            "use_feat_batchnorm": True,
+            "feature_dim": 80,
+            "nhead": 8,
+            "attention_dim": 512,
+            "num_decoder_layers": 6,
+            # parameters for decoding
             "search_beam": 20,
-            "output_beam": 5,
+            "output_beam": 8,
             "min_active_states": 30,
             "max_active_states": 10000,
             "use_double_scores": True,
+            "env_info": get_env_info(),
         }
     )
     return params
 
 def build_dataloader(feats_dir):
     alignment_dls = []
-    cuts = load_manifest_lazy(feats_dir / "cuts.jsonl.gz")
+    cuts = load_manifest(feats_dir / "cuts.jsonl.gz")
 
     if not isinstance(cuts, list):
         cuts = [cuts]
     for cut in cuts:
         k2_dataset = K2SpeechRecognitionDataset(
-            input_stratepy=PrecomputedFeatures(),
+            input_strategy=PrecomputedFeatures(),
             return_cuts=True,
         )
         sampler = SimpleCutSampler(
-            cuts,
+            cut,
             max_cuts=1,
         )
         alignment_dl = DataLoader(
@@ -97,16 +107,13 @@ def align_one_batch(
     feature = batch["inputs"]
     assert feature.ndim == 3
     feature = feature.to(device)
+    print(feature.shape)
     # at entry, feature is (N, T, C)
 
-    feature = feature.permute(0, 2, 1)  # now feature is (N, C, T)
-    print(feature.shape)
-
-    nnet_output = model(feature)
-    print(nnet_output.shape)
+    supervisions = batch["supervisions"]
+    nnet_output, memory, memory_key_padding_mask = model(feature)
     # nnet_output is (N, T, C)
 
-    supervisions = batch["supervisions"]
     supervision_segments = torch.stack(
         (
             supervisions["sequence_idx"],
@@ -144,14 +151,14 @@ def flexible_alignment(
     HLGs: k2.Fsa,
     lexicon: Lexicon,
 ):
-    results = []
+    results = defaultdict(list)
 
     for batch_idx, batch in enumerate(dl):
-        assert len(batch["supervisions"]["cut"]) == 2
+        assert len(batch["supervisions"]["cut"]) == 1
 
         cut_ids = [cut.id for cut in batch["supervisions"]["cut"]]
         texts = batch["supervisions"]["text"]
-        hlg_id = batch["supervisions"]["cut"][0].supervisions[0].hlg_id
+        hlg_id = int(batch["supervisions"]["cut"][0].supervisions[0].hlg_id)
         HLG = HLGs[hlg_id]
 
         hyps_dict = align_one_batch(
@@ -185,6 +192,7 @@ def main():
 
     lexicon = Lexicon(lang_dir)
     max_phone_id = max(lexicon.tokens)
+    num_classes = max_phone_id + 1
 
     device = torch.device("cpu")
     if torch.cuda.is_available():
@@ -198,10 +206,15 @@ def main():
     if not hasattr(HLGs, "lm_scores"):
         HLGs.lm_scores = HLGs.scores.clone()
 
-    model = TdnnLstm(
+    model = Conformer(
         num_features=params.feature_dim,
-        num_classes=max_phone_id + 1,  # +1 for the blank symbol
+        nhead=params.nhead,
+        d_model=params.attention_dim,
+        num_classes=num_classes,
         subsampling_factor=params.subsampling_factor,
+        num_decoder_layers=params.num_decoder_layers,
+        vgg_frontend=params.vgg_frontend,
+        use_feat_batchnorm=params.use_feat_batchnorm,
     )
     load_checkpoint(args.checkpoint, model)
     model.to(device)

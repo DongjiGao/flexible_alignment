@@ -46,7 +46,7 @@ vad_segment_output_dir="${data_dir}"
 wav_file="${data_dir}/wav.scp"
 
 # flexible_alignment setting
-model=""
+model="pretraied_model/pretrained.pt"
 output_dir="exp/alignment/${base}_${spk}${suffix}"
 
 allow_insertion=false

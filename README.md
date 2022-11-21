@@ -14,7 +14,7 @@ cd icefall
 pip install -r requirements.txt
 export PYTHONPATH=/tmp/icefall:$PYTHONPATH
 ```
-**[Deprecated]** <s>### Install [Hugging Face](https://huggingface.co/) for fine-tuning and loading ASR model</s>
+### **[Deprecated]** <s>Install [Hugging Face](https://huggingface.co/) for fine-tuning and loading ASR model</s>
 ```
 <s>pip install transformers</s>
 <s>pip install datasets</s>
@@ -27,7 +27,7 @@ pip install pyroomacoustics
 ```
 https://pyannote.github.io/
 ```
-Note: you may need token to download pretrained VAD model from Huggingface. For more details, please read [this](https://github.com/pyannote/pyannote-audio)
+Note: you may need token to download pretrained VAD model from Huggingface. For more details, please read [this](https://github.com/pyannote/pyannote-audio).
 ## Usage
 ```
 ./run.sh

@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 
-# 2020 Dongji Gao
+# Copyright 2020 Johns Hopkins University (author: Dongji Gao)
 
 import argparse
-import torch
 from collections import defaultdict
-from pyannote.audio.utils.signal import Binarize
+
+from pyannote.audio import Pipeline
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description="This script do VAD on input audio files and "
-                                                 "analyze VAD performance.")
-    parser.add_argument("--ref-segment", type=str, help="reference segments file")
-    parser.add_argument("--collar", type=float, default=0.0, help="extend segments boundary")
-    parser.add_argument("--gap", type=float, default=0.0, help="min nonsilence allowed")
-    parser.add_argument("--metric", type=str, default="precision_recall", help="metric")
+    parser = argparse.ArgumentParser(
+        description="This script do VAD on input audio files."
+    )
+    parser.add_argument(
+        "--auth-token",
+        type=str,
+        help="Huggingface token for downloading pretrained model",
+    )
+    parser.add_argument(
+        "--collar", type=float, default=0.0, help="extend segments boundary"
+    )
     parser.add_argument("wav_file", type=str, help="wav files")
     parser.add_argument("output_dir", type=str, help="output directory")
 
@@ -24,7 +29,7 @@ def get_args():
 
 def get_ref_segments(ref_segment_file):
     ref_segments = defaultdict(list)
-    with open(ref_segment_file, 'r') as rg:
+    with open(ref_segment_file, "r") as rg:
         for line in rg.readlines():
             _, wav_id, start, end = line.split()
             start, end = float(start), float(end)
@@ -32,25 +37,21 @@ def get_ref_segments(ref_segment_file):
     return ref_segments
 
 
-def do_vad(wav_file, collar, gap):
-    sad = torch.hub.load('pyannote/pyannote-audio', 'sad_dihard')
+def do_vad(wav_file, token, collar):
+    pipeline = Pipeline.from_pretrained(
+        "pyannote/voice-activity-detection", use_auth_token=token
+    )
 
     segments_dict = defaultdict(list)
-    with open(wav_file, 'r') as wf:
+    with open(wav_file, "r") as wf:
         for line in wf.readlines():
-            print(line)
             line_list = line.split()
             assert len(line_list) == 2
 
-            wav_id, location = line_list
-            test_file = {'uri': wav_id, 'audio': location}
+            wav_id, wav_location = line_list
+            vad_segments = pipeline(wav_location)
 
-            sad_scores = sad(test_file)
-            binarize = Binarize(offset=0.35, onset=0.35, log_scale=True,
-                                min_duration_off=gap, min_duration_on=1.0)
-            speech = binarize.apply(sad_scores, dimension=1)
-            print(len(speech))
-            for segment in speech:
+            for segment, _, _ in vad_segments.itertracks(yield_label=True):
                 start = max(0, segment.start - collar)
                 end = segment.end + collar
                 segments_dict[wav_id].append((start, end))
@@ -59,7 +60,7 @@ def do_vad(wav_file, collar, gap):
 
 def write_output(segments_dict, output_dir):
     segments = f"{output_dir}/segments"
-    with open(segments, 'w') as seg:
+    with open(segments, "w") as seg:
         for wav_id in segments_dict:
             print(wav_id)
             for index, seg_tuple in enumerate(segments_dict[wav_id]):
@@ -141,7 +142,7 @@ def analyze(ref_segments_dict, hyp_segments_dict, metric):
 
         all = sum([len(hyp_segments_dict[x]) for x in hyp_segments_dict])
         ai = sum(total_ious) / len(total_ious)
-        print(total_count/all, ai)
+        print(total_count / all, ai)
 
     elif metric == "jcard":
         for session in hyp_segments_dict:
@@ -162,11 +163,19 @@ def analyze(ref_segments_dict, hyp_segments_dict, metric):
 
 def main():
     args = get_args()
-    hyp_segments_dict = do_vad(args.wav_file, args.collar, args.gap)
+    assert (
+        args.auth_token is not None
+    ), f"auth-token must be provided for downloading pretrained VAD model from huggingface "
+
+    hyp_segments_dict = do_vad(args.wav_file, args.auth_token, args.collar)
     write_output(hyp_segments_dict, args.output_dir)
-    if args.ref_segment:
-        ref_segments_dict = get_ref_segments(args.ref_segment)
-        analyze(ref_segments_dict, hyp_segments_dict, args.metric)
+
+    # Dongji: Deprecated
+
+
+#    if args.ref_segment:
+#        ref_segments_dict = get_ref_segments(args.ref_segment)
+#        analyze(ref_segments_dict, hyp_segments_dict, args.metric)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ log() {
 stage=1
 stop_stage=100
 
-base="EC"
+base="EC_toy"
 # ssl or fbank
 feature_type="fbank" 
 
@@ -27,7 +27,7 @@ use_xvector=false
 
 # lang and data setting
 oov="<UNK>"
-lang_dir="data/lang"
+lang_dir="data/lang_bpe_500"
 graph_dir="exp/graph/${base}_${spk}${suffix}"
 
 data_dir="data/${base}"
@@ -106,7 +106,7 @@ fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   log "Stage 1: preparing lang"
-  if [ -f ${lang}/lexicon.txt ]; then
+  if [ -f ${lang_dir}/lexicon.txt ]; then
     ./local/prepare_lang.py --lang-dir "${lang_dir}"
   else
     log "Lexicon file (${lang_dir}/lexicon.txt) must be provided"
@@ -118,7 +118,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   log "Stage 2: making alignment graph (G.fst.txt)" 
   ./local/make_g.py \
     --text-file "${text}" \
-    --words "${lang_dir}/words.txt" \
+    --lang-dir "${lang_dir}" \
     --output-dir "${lang_dir}" \
     --allow-insertion "${allow_insertion}" \
     --insertion-weight "${insertion_weight}"
@@ -127,7 +127,7 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   log "Stage 3: making decoding graph (HLG)" 
   ./local/compile_hlg.py \
-    --lang-dir “${lang_dir}”
+    --lang-dir ${lang_dir}
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then

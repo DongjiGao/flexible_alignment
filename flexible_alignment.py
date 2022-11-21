@@ -216,6 +216,7 @@ def main():
         HLGs=HLGs,
         lexicon=lexicon,
     )
+    print(results_dict)
 
 
 if __name__ == "__main__":

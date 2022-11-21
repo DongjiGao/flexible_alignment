@@ -133,13 +133,21 @@ fi
 ./local/compile_hlg.py \
   --lang-dir ${lang_dir}
 ```
-### Stage 4: prepare lhotse dataset and compute acoustic features [ssl,fbank]
+### Stage 4: prepare lhotse dataset and compute acoustic features (SSL or Fbank)
 ```
 ${cuda_cmd} "${log_dir}/prepare_lhotse.log" local/prepare_lhotse_cutset.py \
   --data-dir "${data_dir}" \
   --lang-dir "${lang_dir}" \
   --feature-type "${feature_type}"
 ```    
+### Stage 5: alignment
+```
+${cuda_cmd} "${log_dir}/flexible_alignment.log" \
+./flexible_alignment.py \
+  --data-dir "${data_dir}" \
+  --lang-dir "${lang_dir}" \
+  --checkpoint "${model}" \--exp-dir "${output_dir}"
+```
 ## Results
 ### ASR model fine-tuned on different pre-trained model 
 

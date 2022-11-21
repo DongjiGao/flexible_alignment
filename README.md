@@ -14,10 +14,10 @@ cd icefall
 pip install -r requirements.txt
 export PYTHONPATH=/tmp/icefall:$PYTHONPATH
 ```
-<s>### Install [Hugging Face](https://huggingface.co/) for fine-tuning and loading ASR model</s>
+<s>### Install [Hugging Face](https://huggingface.co/) for fine-tuning and loading ASR model</s> (Deprecated)
 ```
-pip install transformers
-pip install datasets
+<s>pip install transformers</s>
+<s>pip install datasets</s>
 ```
 ### Install [pyroomacoustics](https://github.com/LCAV/pyroomacoustics) for blind source separation
 ```

@@ -14,7 +14,7 @@ cd icefall
 pip install -r requirements.txt
 export PYTHONPATH=/tmp/icefall:$PYTHONPATH
 ```
-<s>### Install [Hugging Face](https://huggingface.co/) for fine-tuning and loading ASR model</s> (Deprecated)
+**[Deprecated]** <s>### Install [Hugging Face](https://huggingface.co/) for fine-tuning and loading ASR model</s> (Deprecated)
 ```
 <s>pip install transformers</s>
 <s>pip install datasets</s>

@@ -16,14 +16,14 @@ export PYTHONPATH=/tmp/icefall:$PYTHONPATH
 ```
 ### **[Deprecated]** <s>Install [Hugging Face](https://huggingface.co/) for fine-tuning and loading ASR model</s>
 ```
-<s>pip install transformers</s>
-<s>pip install datasets</s>
+pip install transformers
+pip install datasets
 ```
-**[Optional]** ### Install [pyroomacoustics](https://github.com/LCAV/pyroomacoustics) for Blind Source Separation
+*** **[Optional]** Install [pyroomacoustics](https://github.com/LCAV/pyroomacoustics) for Blind Source Separation
 ```
 pip install pyroomacoustics
 ```
-**[Deprecated]** ### Install [pyannote](https://pyannote.github.io/) for Voice Activity Detection
+*** **[Optional]** Install [pyannote](https://pyannote.github.io/) for Voice Activity Detection
 ```
 https://pyannote.github.io/
 ```

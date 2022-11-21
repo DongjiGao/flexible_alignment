@@ -25,7 +25,7 @@ pip install pyroomacoustics
 ```
 ### **[Optional]** Install [pyannote](https://pyannote.github.io/) for Voice Activity Detection
 ```
-https://pyannote.github.io/
+pip install pyannote.audio
 ```
 Note: you may need token to download pretrained VAD model from Huggingface. For more details, please read [this](https://github.com/pyannote/pyannote-audio).
 ## Usage
@@ -67,7 +67,7 @@ session1_speaker2 /DATA/session1_speaker2.wav
 session1_speaker3 /DATA/session1_speaker3.wav
 
 ```
-#### lexicon
+#### lexicon/BPE lexicon
 ##### This file maps phonemes to word
 ```
 wreck   R EH K
@@ -75,13 +75,11 @@ a       AX
 nice    N AY S
 beach   B IY CH
 ```
-#### ses2spk
-##### The mapping between session and speakers
+#### ses2hlg
+##### The mapping between session and HLG WFST graph
 ```
-session1 speaker1
-session1 speaker2
-session2 spkeaer3
-session2 spkeaer4
+session1 0
+session2 1
 ```
 #### ASR model and phoneme vocabulary
 ###### These can be download here.
@@ -109,8 +107,7 @@ else
   log "Skip doing VAD"
 fi
 ```
-#### This step do VAD on BSSed audio (wav_file) and write segments in vad_output_dir. If ground truth segment is provided, it can analyze the quality of VAD results by measuring [precision_call, IoU (intersection over union), Jaccard error rate].
-
+#### This step do VAD on BSSed audio (wav_file) and write segments in vad_output_dir.
 ### Stage 1: make lang directory
 ```
 if [ -f ${lang_dir}/lexicon.txt ]; then
@@ -122,25 +119,25 @@ fi
 ```
 #### This step makes lexicon WFST (L.fst) in graph_dir
 
-### Stage 3: flexible alignment
+### Stage 2: make flexible alignment graph (G.fst.txt)
 ```
-${alignment_cmd} ${log_dir}/align.log align.py \
-  ${model} \
-  ${dataset} \
-  ${text} \
-  ${ses2spk} \
-  ${lang_dir} \
-  ${graph_dir} \
-  ${output_dir} \
-  ${use_xvector}
+./local/make_g.py \
+  --text-file "${text}" \
+  --lang-dir "${lang_dir}" \
+  --output-dir "${lang_dir}" \
+  --allow-insertion "${allow_insertion}" \
+  --insertion-weight "${insertion_weight}"
 ```
-#### This step does 3 things: 
-  1) build decoding (alignment graph) of given text. 
-  2) integrate ASR mode and decoding graph in graph_dir (aligner) 
-  3) do flexible alingment for dataset. 
-  if use_xvector is turned on
-  4) get nbest alignment and do xvector rescoring (speaker dependent)
+### Stage 3: compile decoding graph (HLGs.pt)
+./local/compile_hlg.py \
+  --lang-dir ${lang_dir}
 
+### Stage 3: prepare lhotse dataset and compute acoustic features [ssl,fbank]
+${cuda_cmd} "${log_dir}/prepare_lhotse.log" local/prepare_lhotse_cutset.py \
+  --data-dir "${data_dir}" \
+  --lang-dir "${lang_dir}" \
+  --feature-type "${feature_type}"
+    
 ## Results
 ### ASR model fine-tuned on different pre-trained model 
 

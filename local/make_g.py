@@ -24,6 +24,12 @@ def get_args():
         default="#0",
     )
     parser.add_argument(
+        "--alignment-type",
+        type=str,
+        choices=["substring", "subsequence"],
+        help="'substring' aligns consecutive segments, subseqnece' align any segments",
+    )
+    parser.add_argument(
         "--allow-insertion",
         type=str2bool,
         default=False,
@@ -79,6 +85,46 @@ def preprocess(text_file):
 
         return ses2spk, spk2utt, utt2text
 
+def make_single_subsequence(
+    utts,
+    utt2text,
+    lexicon,
+    unk_id,
+    disambig_id,
+    allow_insertion=False,
+    insertion_weight=0,
+):  
+    arcs = []
+    start_state = 0
+    next_state = 1
+    cur_state = start_state
+    utt_start_state= cur_state
+
+    for utt_idx, utt in enumerate(utts):
+        if allow_insertion:
+            insertion_arc = get_arc(
+                cur_state, cur_state, unk_id, unk_id, insertion_weight
+            )
+            arcs.append(insertion_arc)
+        tokens = utt2text[utt]
+        ids = tokens_to_ids(tokens, lexicon, unk_id)
+        for id in ids:
+            arc = get_arc(cur_state, next_state, id , id, 0)
+            arcs.append(arc)
+            cur_state = next_state
+            next_state += 1
+        utt_skip_arc = get_arc(utt_start_state, cur_state, disambig_id, 0, 0)
+        arcs.append(utt_skip_arc)
+        utt_start_state = cur_state
+
+    prefianl_state = cur_state
+    final_state = next_state
+    final_arc = get_arc(prefianl_state, final_state, -1, -1, 0)
+    arcs.append(final_arc)
+
+    arcs = sorted(arcs, key=lambda x: int(x.split()[0]))
+    return arcs
+
 
 def make_single_substring(
     utts,
@@ -94,7 +140,7 @@ def make_single_substring(
     start_state = 0
     next_state = 1
     cur_state = start_state
-    
+
     num_utts = len(utts)
     assert num_utts >= 2
 
@@ -124,9 +170,9 @@ def make_single_substring(
         arcs.append(skip_arc)
     final_arc = get_arc(prefinal_stage, final_state, -1, -1, 0)
     arcs.append(final_arc)
+
     # add final state
     arcs.append(f"{final_state}")
-
     # k2 quires arcs of FSA ordered by from_state
     arcs = sorted(arcs, key=lambda x: int(x.split()[0]))
     return arcs
@@ -136,6 +182,7 @@ def main():
     args = get_args()
     lexicon = Lexicon(Path(args.lang_dir))
     output_dir = Path(args.output_dir)
+    alignment_type = args.alignment_type
 
     eps_id = lexicon.word_table["<eps>"]
     assert eps_id == 0
@@ -150,15 +197,26 @@ def main():
                 if len(ses2spk[session]) == 1:
                     speaker = ses2spk[session][0]
                     utts = spk2utt[speaker]
-                    fst_arcs = make_single_substring(
-                        utts=utts,
-                        utt2text=utt2text,
-                        lexicon=lexicon,
-                        unk_id=unk_id,
-                        disambig_id=disambig_id,
-                        allow_insertion=args.allow_insertion,
-                        insertion_weight=args.insertion_weight,
-                    )
+                    if alignment_type == "substring":
+                        fst_arcs = make_single_substring(
+                            utts=utts,
+                            utt2text=utt2text,
+                            lexicon=lexicon,
+                            unk_id=unk_id,
+                            disambig_id=disambig_id,
+                            allow_insertion=args.allow_insertion,
+                            insertion_weight=args.insertion_weight,
+                        )
+                    elif alignment_type == "subsequence":
+                        fst_arcs = make_single_subsequence(
+                            utts=utts,
+                            utt2text=utt2text,
+                            lexicon=lexicon,
+                            unk_id=unk_id,
+                            disambig_id=disambig_id,
+                            allow_insertion=args.allow_insertion,
+                            insertion_weight=args.insertion_weight,
+                        )
 
                     for arc in fst_arcs:
                         g_fst.write(f"{arc}\n")

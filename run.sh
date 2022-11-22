@@ -49,6 +49,8 @@ wav_file="${data_dir}/wav.scp"
 model="pretraied_model/pretrained.pt"
 output_dir="exp/alignment/${base}_${spk}${suffix}"
 
+# substring or subsequence
+alignment_type="substring"
 allow_insertion=false
 insertion_weight=0
 
@@ -120,6 +122,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     --text-file "${text}" \
     --lang-dir "${lang_dir}" \
     --output-dir "${lang_dir}" \
+    --alignment-type "${alignment_type}" \
     --allow-insertion "${allow_insertion}" \
     --insertion-weight "${insertion_weight}"
 fi
@@ -147,7 +150,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     --lang-dir "${lang_dir}" \
     --checkpoint "${model}" \
     --exp-dir "${output_dir}"
-
 fi
 
 #  log "Stage 4: doing flexible alignment"

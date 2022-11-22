@@ -135,10 +135,9 @@ def compile_HLG(lang_dir: str) -> k2.Fsa:
 def main():
     args = get_args()
     lang_dir = Path(args.lang_dir)
-    print(type(lang_dir))
 
     if (lang_dir / "HLGs.pt").is_file():
-        logging.info(f"{lang_dir}/HLG.pt already exists - skipping")
+        logging.info(f"{lang_dir}/HLGs.pt already exists - skipping")
         return
 
     logging.info(f"Processing {lang_dir}")

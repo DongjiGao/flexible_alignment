@@ -145,11 +145,6 @@ def make_single_substring(
     assert num_utts >= 2
 
     for utt_idx, utt in enumerate(utts):
-        if allow_insertion:
-            insertion_arc = get_arc(
-                cur_state, cur_state, unk_id, unk_id, insertion_weight
-            )
-            arcs.append(insertion_arc)
 
         tokens = utt2text[utt]
         ids = tokens_to_ids(tokens, lexicon, unk_id)
@@ -163,12 +158,24 @@ def make_single_substring(
             arcs.append(skip_arc)
             text_ending_states.append(cur_state)
 
-    prefinal_stage = cur_state
+    prefinal_state = cur_state
     final_state = next_state
+
+    if allow_insertion:
+        insertion_arc = get_arc(
+            start_state, start_state, unk_id, unk_id, insertion_weight
+        )
+        arcs.append(insertion_arc)
+
+        insertion_arc = get_arc(
+            prefinal_state, prefinal_state, unk_id, unk_id, insertion_weight
+        )
+        arcs.append(insertion_arc)
+
     for state in text_ending_states:
-        skip_arc = get_arc(state, prefinal_stage, disambig_id, 0, 0)
+        skip_arc = get_arc(state, prefinal_state, disambig_id, 0, 0)
         arcs.append(skip_arc)
-    final_arc = get_arc(prefinal_stage, final_state, -1, -1, 0)
+    final_arc = get_arc(prefinal_state, final_state, -1, -1, 0)
     arcs.append(final_arc)
 
     # add final state

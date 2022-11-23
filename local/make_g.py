@@ -101,11 +101,6 @@ def make_single_subsequence(
     utt_start_state= cur_state
 
     for utt_idx, utt in enumerate(utts):
-        if allow_insertion:
-            insertion_arc = get_arc(
-                cur_state, cur_state, unk_id, unk_id, insertion_weight
-            )
-            arcs.append(insertion_arc)
         tokens = utt2text[utt]
         ids = tokens_to_ids(tokens, lexicon, unk_id)
         for id in ids:
@@ -117,11 +112,25 @@ def make_single_subsequence(
         arcs.append(utt_skip_arc)
         utt_start_state = cur_state
 
-    prefianl_state = cur_state
+    prefinal_state = cur_state
     final_state = next_state
-    final_arc = get_arc(prefianl_state, final_state, -1, -1, 0)
+
+    if allow_insertion:
+        insertion_arc = get_arc(
+            start_state, start_state, unk_id, unk_id, insertion_weight
+        )
+        arcs.append(insertion_arc)
+
+        insertion_arc = get_arc(
+            prefinal_state, prefinal_state, unk_id, unk_id, insertion_weight
+        )
+        arcs.append(insertion_arc)
+
+    final_arc = get_arc(prefinal_state, final_state, -1, -1, 0)
     arcs.append(final_arc)
 
+    # add final state
+    arcs.append(f"{final_state}")
     arcs = sorted(arcs, key=lambda x: int(x.split()[0]))
     return arcs
 
@@ -175,7 +184,7 @@ def make_single_substring(
     for state in text_ending_states:
         skip_arc = get_arc(state, prefinal_state, disambig_id, 0, 0)
         arcs.append(skip_arc)
-    final_arc = get_arc(prefinal_state, final_state, -1, -1, 0)
+    final_arc = get_arc(prefinal_state, final_state, 0, -1, 0)
     arcs.append(final_arc)
 
     # add final state

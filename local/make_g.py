@@ -184,7 +184,7 @@ def make_single_substring(
     for state in text_ending_states:
         skip_arc = get_arc(state, prefinal_state, disambig_id, 0, 0)
         arcs.append(skip_arc)
-    final_arc = get_arc(prefinal_state, final_state, 0, -1, 0)
+    final_arc = get_arc(prefinal_state, final_state, -1, -1, 0)
     arcs.append(final_arc)
 
     # add final state

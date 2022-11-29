@@ -81,6 +81,7 @@ def main():
         )
         # get small cuts from supervision (segments)
         cut_set = cut_set.trim_to_supervisions().to_eager()
+        cut_set = cut_set.sort_by_duration()
         cut_set = cut_set.compute_and_store_features(
             extractor=extractor,
             storage_path=f"{data_dir}/{feature_type}_feats",

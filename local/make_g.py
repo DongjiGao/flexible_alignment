@@ -14,6 +14,11 @@ def get_args():
     parser.add_argument("--text-file", type=str, help="text file")
     parser.add_argument("--lang-dir", type=str, help="lang directory")
     parser.add_argument(
+        "--level",
+        choices=["word", "segment"],
+        default="segment",
+    )
+    parser.add_argument(
         "--unk-token",
         type=str,
         default="<UNK>",
@@ -141,11 +146,13 @@ def make_single_substring(
     lexicon,
     unk_id,
     disambig_id,
+    level="segment",
     allow_insertion=False,
     insertion_weight=0,
+    word_level=True,
 ):
     arcs = []
-    text_ending_states = []
+    boundary_states = []
     start_state = 0
     next_state = 1
     cur_state = start_state
@@ -162,10 +169,11 @@ def make_single_substring(
             arcs.append(arc)
             cur_state = next_state
             next_state += 1
-        if utt_idx < num_utts - 1:
-            skip_arc = get_arc(start_state, cur_state, disambig_id, 0, 0)
-            arcs.append(skip_arc)
-            text_ending_states.append(cur_state)
+            if level == "word":
+                boundary_states.append(cur_state)
+        if level == "segment":
+            boundary_states.append(cur_state)
+        del boundary_states[-1]
 
     prefinal_state = cur_state
     final_state = next_state
@@ -181,7 +189,9 @@ def make_single_substring(
         )
         arcs.append(insertion_arc)
 
-    for state in text_ending_states:
+    for state in boundary_states:
+        skip_arc = get_arc(start_state, state, disambig_id, 0, 0)
+        arcs.append(skip_arc)
         skip_arc = get_arc(state, prefinal_state, disambig_id, 0, 0)
         arcs.append(skip_arc)
     final_arc = get_arc(prefinal_state, final_state, -1, -1, 0)
@@ -220,6 +230,7 @@ def main():
                             lexicon=lexicon,
                             unk_id=unk_id,
                             disambig_id=disambig_id,
+                            level=args.level,
                             allow_insertion=args.allow_insertion,
                             insertion_weight=args.insertion_weight,
                         )

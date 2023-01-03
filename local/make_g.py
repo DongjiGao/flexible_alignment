@@ -77,15 +77,17 @@ def preprocess(text_file):
             meta_id = line_list[0]
             text_list = line_list[1:]
 
-            session, speaker, utt_id = meta_id.split("_")
+            session, speaker, utt = meta_id.split("_")
+            speaker_id = f"{session}_{speaker}"
+            utt_id = meta_id
 
             if session not in ses2spk:
-                ses2spk[session] = [speaker]
+                ses2spk[session] = [speaker_id]
             else:
-                if speaker not in ses2spk[session]:
-                    ses2spk[session].append(speaker)
+                if speaker_id not in ses2spk[session]:
+                    ses2spk[session].append(speaker_id)
 
-            spk2utt[speaker].append(utt_id)
+            spk2utt[speaker_id].append(utt_id)
             utt2text[utt_id] = text_list
 
         return ses2spk, spk2utt, utt2text
@@ -101,7 +103,7 @@ def make_single_subsequence(
 ):  
     arcs = []
     start_state = 0
-    next_state = 1
+    next_state = 2
     cur_state = start_state
     utt_start_state= cur_state
 

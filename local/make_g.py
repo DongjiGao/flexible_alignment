@@ -103,7 +103,7 @@ def make_single_subsequence(
 ):  
     arcs = []
     start_state = 0
-    next_state = 2
+    next_state = 1
     cur_state = start_state
     utt_start_state= cur_state
 

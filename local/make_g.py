@@ -44,6 +44,11 @@ def get_args():
         type=float,
         default=0,
     )
+    parser.add_argument(
+        "--insertion-tokens",
+        type=str,
+        default="",
+    )
     parser.add_argument("--output-dir", type=str, help="output dir")
     return parser.parse_args()
 
@@ -92,6 +97,7 @@ def preprocess(text_file):
 
         return ses2spk, spk2utt, utt2text
 
+
 def make_single_subsequence(
     utts,
     utt2text,
@@ -100,18 +106,19 @@ def make_single_subsequence(
     disambig_id,
     allow_insertion=False,
     insertion_weight=0,
-):  
+    insertion_list=[],
+):
     arcs = []
     start_state = 0
     next_state = 1
     cur_state = start_state
-    utt_start_state= cur_state
+    utt_start_state = cur_state
 
     for utt_idx, utt in enumerate(utts):
         tokens = utt2text[utt]
         ids = tokens_to_ids(tokens, lexicon, unk_id)
         for id in ids:
-            arc = get_arc(cur_state, next_state, id , id, 0)
+            arc = get_arc(cur_state, next_state, id, id, 0)
             arcs.append(arc)
             cur_state = next_state
             next_state += 1
@@ -123,15 +130,24 @@ def make_single_subsequence(
     final_state = next_state
 
     if allow_insertion:
-        insertion_arc = get_arc(
-            start_state, start_state, unk_id, unk_id, insertion_weight
-        )
-        arcs.append(insertion_arc)
+        for insertion_token_id in insertion_list:
+            insertion_arc = get_arc(
+                start_state,
+                start_state,
+                insertion_token_id,
+                insertion_token_id,
+                insertion_weight,
+            )
+            arcs.append(insertion_arc)
 
-        insertion_arc = get_arc(
-            prefinal_state, prefinal_state, unk_id, unk_id, insertion_weight
-        )
-        arcs.append(insertion_arc)
+            insertion_arc = get_arc(
+                prefinal_state,
+                prefinal_state,
+                insertion_token_id,
+                insertion_token_id,
+                insertion_weight,
+            )
+            arcs.append(insertion_arc)
 
     final_arc = get_arc(prefinal_state, final_state, -1, -1, 0)
     arcs.append(final_arc)
@@ -152,6 +168,7 @@ def make_single_substring(
     allow_insertion=False,
     insertion_weight=0,
     word_level=True,
+    insertion_list=[],
 ):
     arcs = []
     boundary_states = []
@@ -160,7 +177,7 @@ def make_single_substring(
     cur_state = start_state
 
     num_utts = len(utts)
-    assert num_utts >= 2
+    #    assert num_utts >= 2
 
     for utt_idx, utt in enumerate(utts):
 
@@ -181,15 +198,24 @@ def make_single_substring(
     final_state = next_state
 
     if allow_insertion:
-        insertion_arc = get_arc(
-            start_state, start_state, unk_id, unk_id, insertion_weight
-        )
-        arcs.append(insertion_arc)
+        for insertion_token_id in insertion_list:
+            insertion_arc = get_arc(
+                start_state,
+                start_state,
+                insertion_token_id,
+                insertion_token_id,
+                insertion_weight,
+            )
+            arcs.append(insertion_arc)
 
-        insertion_arc = get_arc(
-            prefinal_state, prefinal_state, unk_id, unk_id, insertion_weight
-        )
-        arcs.append(insertion_arc)
+            insertion_arc = get_arc(
+                prefinal_state,
+                prefinal_state,
+                insertion_token_id,
+                insertion_token_id,
+                insertion_weight,
+            )
+            arcs.append(insertion_arc)
 
     for state in boundary_states:
         skip_arc = get_arc(start_state, state, disambig_id, 0, 0)
@@ -212,9 +238,25 @@ def main():
     output_dir = Path(args.output_dir)
     alignment_type = args.alignment_type
 
+    unk_id = lexicon.word_table[args.unk_token]
+    if args.insertion_tokens:
+        insertion_tokens_path = Path(args.insertion_tokens)
+        if not insertion_tokens_path.is_file():
+            raise ValueError(
+                f"Insertion token file {insertion_tokens_path} does not exist."
+            )
+        insertion_set = set()
+        with insertion_tokens_path.open("r") as f:
+            for line in f.readlines():
+                token = line.split()[0]
+                token_id = lexicon.word_table[token]
+                insertion_set.add(token_id)
+        insertion_list = list(insertion_set)
+    else:
+        insertion_list = [unk_id]
+
     eps_id = lexicon.word_table["<eps>"]
     assert eps_id == 0
-    unk_id = lexicon.word_table[args.unk_token]
     disambig_id = lexicon.word_table[args.disambig_token]
 
     ses2spk, spk2utt, utt2text = preprocess(Path(args.text_file))
@@ -235,6 +277,7 @@ def main():
                             level=args.level,
                             allow_insertion=args.allow_insertion,
                             insertion_weight=args.insertion_weight,
+                            insertion_list=insertion_list,
                         )
                     elif alignment_type == "subsequence":
                         fst_arcs = make_single_subsequence(
@@ -245,6 +288,7 @@ def main():
                             disambig_id=disambig_id,
                             allow_insertion=args.allow_insertion,
                             insertion_weight=args.insertion_weight,
+                            insertion_list=insertion_list,
                         )
 
                     for arc in fst_arcs:

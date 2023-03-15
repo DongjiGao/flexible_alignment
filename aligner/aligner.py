@@ -1,4 +1,3 @@
-# 2021 Dongji Gao
 
 import os
 import time
